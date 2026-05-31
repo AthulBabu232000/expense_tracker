@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Entries{% endblock %}
+
+{% block content %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Manage Entries</h2>
+    <a class="btn btn-sm btn-outline-danger" href="{{ url_for('admin_logout') }}">Logout</a>
+  </div>
+
+  <form method="get" action="{{ url_for('manage') }}" class="row g-2 mb-3">
+    <div class="col-auto">
+      <input class="form-control" type="text" name="q" value="{{ q }}" placeholder="Filter">
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-primary" type="submit">Search</button>
+    </div>
+  </form>
+
+  <div class="table-responsive">
+    <table class="table table-sm table-striped">
+      <thead class="table-light">
+        <tr><th>Primary Key</th><th>Name</th><th>Category</th><th>Amount</th><th>Timestamp</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td class="small text-muted">{{ e.primary_key }}</td>
+          <td>{{ e.name }}</td>
+          <td>{{ e.category }}</td>
+          <td>₹ {{ '%.2f'|format(e.amount) }}</td>
+          <td class="small text-muted">{{ e.timestamp }}</td>
+          <td>
+            <form method="post" action="{{ url_for('delete', entry_id=e._id) }}" style="display:inline">
+              <button class="btn btn-sm btn-outline-danger" type="submit" onclick="return confirm('Delete?')">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

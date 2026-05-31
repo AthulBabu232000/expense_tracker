@@ -1,0 +1,75 @@
+:root{
+	--bg-black: #101010;
+	--accent-gold: #FFD700;
+	--text-strong: #FFFFFF;
+	--muted: #8a8a8a;
+	--error-red: #FF3D00;
+}
+
+/* Prefer locally-installed Cascadia Mono/Cascadia Code, fall back to monospace */
+body { font-family: 'Cascadia Mono', 'Cascadia Code', ui-monospace, 'SFMono-Regular', Menlo, Monaco, 'Roboto Mono', monospace; background: var(--bg-black); color: var(--accent-gold); }
+.container { max-width: 1100px; margin: 20px auto; padding: 0 14px; }
+.card { border: 0; border-radius: 8px; background: rgba(255,215,0,0.02); box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+.navbar-brand{ font-weight:700; color:var(--accent-gold) !important; letter-spacing:0.4px }
+.navbar, .bg-dark { background: linear-gradient(90deg,#0f0f0f, var(--bg-black)); }
+.btn-primary{ background: transparent; color:var(--accent-gold); border: 1px solid rgba(255,215,0,0.12); }
+.btn-primary:hover{ background: rgba(255,215,0,0.04); }
+.btn-outline-primary{ color:var(--accent-gold); border-color:var(--accent-gold); }
+.table thead th { background: rgba(255,215,0,0.04); color:var(--accent-gold); }
+.small-muted { color: var(--muted); }
+
+/* Input styling: remove default browser focus outlines and use subtle neon glow */
+input, textarea, select {
+	background: rgba(255,255,255,0.02);
+	border: 1px solid rgba(255,255,255,0.06);
+	color: var(--accent-gold);
+	padding: 0.5rem 0.75rem;
+	border-radius: 6px;
+}
+
+input:focus, textarea:focus, select:focus {
+	outline: none;
+	box-shadow: 0 0 16px rgba(255,215,0,0.12), 0 0 40px rgba(255,215,0,0.06) inset;
+	border-color: rgba(255,215,0,0.28);
+}
+
+/* remove number input spin buttons */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }
+
+/* links and accents */
+a { color: var(--accent-gold); text-decoration: none; }
+a:hover{ color: #fff; text-decoration: underline }
+a.btn-link { text-decoration: none; color: rgba(255,255,255,0.65); }
+
+/* table rows */
+.table-striped > tbody > tr:nth-of-type(odd) { background-color: rgba(255,215,0,0.02); }
+
+/* error helper */
+.text-error { color: var(--error-red) !important; }
+.btn-danger { background: transparent; color: var(--error-red); border: 1px solid rgba(255,61,0,0.12); }
+.btn-danger:hover{ background: rgba(255,61,0,0.04); }
+
+/* Dark table adjustments */
+.table, .table td, .table th {
+	background: transparent !important;
+	color: var(--accent-gold) !important;
+	border-color: rgba(255,215,0,0.06) !important;
+}
+.table td, .table th { vertical-align: middle; }
+.table thead th { color: var(--accent-gold); }
+.table tbody tr { background: rgba(255,255,255,0.01); }
+.table-responsive { overflow-x: auto; }
+
+/* modal image */
+.modal-img { max-width: 100%; height: auto; border-radius: 6px; }
+
+/* ensure text in cards/tables is readable */
+.card, .table { color: var(--accent-gold); }
+.text-muted, .small { color: var(--muted) !important; }
+
+/* small responsive tweaks */
+@media (max-width: 576px){
+	.container{ padding: 0 12px; }
+}

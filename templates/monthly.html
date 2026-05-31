@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Monthly - {{ month }}/{{ year }}{% endblock %}
+
+{% block content %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Monthly Expenses for {{ month }}/{{ year }}</h2>
+    <div>
+      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('entry') }}">New entry</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('yearly') }}">Yearly</a>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-bordered align-middle">
+      <thead class="table-light">
+        <tr><th>Primary Key</th><th>Name</th><th>Category</th><th>Amount</th><th>Image</th><th>Timestamp</th></tr>
+      </thead>
+      <tbody>
+        {% for e in entries %}
+        <tr>
+          <td class="text-muted small">{{ e.primary_key }}</td>
+          <td>{{ e.name }}</td>
+          <td>{{ e.category }}</td>
+          <td>₹ {{ '%.2f'|format(e.amount) }}</td>
+          <td>
+            {% if e.image_url %}
+              <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#imageModal" data-image="{{ e.image_url }}">View</button>
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ e.timestamp }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="mt-4">Remaining per category (dummy)</h3>
+  <div class="row">
+    {% for k,v in remaining_by_cat.items() %}
+      <div class="col-sm-6 col-md-3 mb-2">
+        <div class="p-2 border rounded bg-light small">{{ k }}: <strong>{{ v }}</strong></div>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}

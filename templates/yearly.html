@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Yearly - {{ year }}{% endblock %}
+
+{% block content %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Yearly Report for {{ year }}</h2>
+    <div>
+      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('entry') }}">New entry</a>
+      <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('monthly') }}">Monthly</a>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover table-bordered">
+      <thead class="table-light">
+        <tr><th>Category</th><th>Amount Spent</th><th>Remaining (dummy)</th></tr>
+      </thead>
+      <tbody>
+        {% for r in results %}
+        <tr>
+          <td>{{ r.category }}</td>
+          <td>₹ {{ '%.2f'|format(r.amount_spent) }}</td>
+          <td>{{ r.remaining }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
