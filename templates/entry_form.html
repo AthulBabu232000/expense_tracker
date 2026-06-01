@@ -9,20 +9,29 @@
 
       <form method="post" enctype="multipart/form-data" class="row g-3">
         <div class="col-12">
-          <label class="form-label">Name of item (required)</label>
+          <label class="form-label">Item (required)</label>
           <input class="form-control" type="text" name="name" required>
         </div>
         <div class="col-md-6">
           <label class="form-label">Category</label>
-          <select class="form-select" name="category">
+          <select class="form-select" name="category" id = "category" required>
+            <option value="">Select a category</option>
             {% for c in categories %}
               <option value="{{ c }}">{{ c }}</option>
             {% endfor %}
           </select>
         </div>
         <div class="col-md-6">
-          <label class="form-label">Amount (Rs) (required)</label>
+          <label class="form-label">Expense (Rs) (required)</label>
           <input class="form-control" type="number" step="0.01" name="amount" required>
+        </div>
+         <div class="col-md-6">
+          <label class="form-label">Opening Balance (Rs) (required)</label>
+          <input class="form-control" type="number"  name="OpeningBalance"  readonly>
+        </div>
+         <div class="col-md-6">
+          <label class="form-label">Closing Balance (Rs) (required)</label>
+          <input class="form-control" type="number"  name="ClosingBalance"  readonly>
         </div>
         <div class="col-12">
           <label class="form-label">Image (optional)</label>
@@ -30,10 +39,43 @@
         </div>
         <div class="col-12">
           <button class="btn btn-primary" type="submit">Submit</button>
-          <a class="btn btn-link" href="{{ url_for('monthly') }}">Monthly view</a>
-          <a class="btn btn-link" href="{{ url_for('yearly') }}">Yearly view</a>
         </div>
       </form>
     </div>
   </div>
+
+  <script>
+    (function() {
+    const category_limits= {"Food": 6000,
+    "Transport": 3000,
+    "Entertainment": 2000,
+    "Bills": 20000,
+    "Shopping": 2000,
+    "Health": 2500,
+    "Investment": 58500,
+    "Savings": 29000,
+    "Miscellaneous": 500};
+
+    const categorySelect = document.querySelector("select[name='category']");
+    const expenseInput = document.querySelector("input[name='amount']");
+    const openingBalanceInput = document.querySelector("input[name='OpeningBalance']");
+    const closingBalanceInput = document.querySelector("input[name='ClosingBalance']");
+    var category_default=categorySelect.value;
+    openingBalanceInput.value=category_default;
+    categorySelect.addEventListener("change", function() {
+      const selectedCategory = categorySelect.value;
+      const openingBalance = category_limits[selectedCategory] || category_default;
+      openingBalanceInput.value = openingBalance;
+      closingBalanceInput.value=openingBalanceInput.value;
+    });
+
+    expenseInput.addEventListener("input", function() {
+      const expense = parseFloat(expenseInput.value) || 0;
+      const openingBalance = parseFloat(openingBalanceInput.value) || 0;
+      const closingBalance = openingBalance - expense;
+      closingBalanceInput.value = closingBalance;
+    });
+    })();
+  </script>
 {% endblock %}
+

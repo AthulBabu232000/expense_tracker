@@ -33,7 +33,20 @@ db = client.get_default_database()
 IMGBB_API_KEY = os.getenv("IMGBB_API_KEY")
 
 # Simple categories (placeholder)
-CATEGORIES = [f"cate{i}" for i in range(1, 6)]
+CATEGORIES = ["Food", "Transport", "Entertainment", "Bills", "Shopping", "Health", "Investment", "Savings", "Miscellaneous"]
+
+CATEGORIES_LIMIT = {
+    "Food": 6000,
+    "Transport": 3000,
+    "Entertainment": 2000,
+    "Bills": 20000,
+    "Shopping": 2000,
+    "Health": 2500,
+    "Investment": 58500,
+    "Savings": 29000,
+    "Miscellaneous": 500}
+
+
 
 
 def _normalize_objectid_str(val: str) -> str:
@@ -81,7 +94,8 @@ def entry():
         name = request.form.get("name", "").strip()
         category = request.form.get("category", "").strip()
         amount = request.form.get("amount", "").strip()
-
+        opening_balance = CATEGORIES_LIMIT.get(category, 0)
+        closing_balance = float(opening_balance)-float(amount)
         if not name or not category or not amount:
             flash("Please fill all required fields.")
             return redirect(url_for("entry"))
@@ -97,7 +111,7 @@ def entry():
         month = now.month
         year = now.year
         primary_key = make_primary_key(month, year)
-
+        
         image_file = request.files.get("image")
         image_url = None
         if image_file and image_file.filename:
@@ -129,6 +143,8 @@ def entry():
             "name": name,
             "category": category,
             "amount": amount_val,
+            "opening_balance":opening_balance,
+            "closing_balance":closing_balance,
             "image_url": image_url,
             "timestamp": now,
             "month": month,
@@ -139,8 +155,7 @@ def entry():
         flash("Entry saved.")
         return redirect(url_for("monthly"))
 
-    return render_template("entry_form.html", categories=CATEGORIES)
-
+    return render_template("entry_form.html", categories=CATEGORIES, open_balance_of_categories=CATEGORIES_LIMIT)
 
 
 
