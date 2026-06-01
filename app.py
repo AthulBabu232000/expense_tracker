@@ -46,7 +46,7 @@ CATEGORIES_LIMIT = {
     "Savings": 29000,
     "Miscellaneous": 500}
 
-
+CATEGORIES_LIMIT_YEARLY = {c: CATEGORIES_LIMIT.get(c, 0) * 12 for c in CATEGORIES}
 
 
 def _normalize_objectid_str(val: str) -> str:
@@ -78,9 +78,20 @@ def _serialize_doc(doc: dict) -> dict:
 
 
 def make_primary_key(month: int, year: int) -> str:
-    """Generate primary key as <count>_<month>_<year>, where count resets each month."""
-    count = db.entries.count_documents({"month": month, "year": year}) + 1
-    return f"{count}_{month}_{year}"
+
+    latest = db.entries.find_one(
+        {"month": month, "year": year},
+        sort=[("timestamp", -1)]
+    )
+
+    if latest:
+        last_pk = latest["primary_key"]
+        last_count = int(last_pk.split("_")[0])
+        new_count = last_count + 1
+    else:
+        new_count = 1
+
+    return f"{new_count}_{month}_{year}"
 
 
 @app.route("/")
@@ -190,9 +201,10 @@ def yearly():
     for row in agg:
         cat = row.get("_id")
         spent = row.get("amount_spent", 0)
-        results.append({"category": cat, "amount_spent": spent, "remaining": max(0, 100000 - spent)})
+        category_limit_yearly = CATEGORIES_LIMIT_YEARLY.get(cat, 0)
+        results.append({"category": cat, "amount_spent": spent, "remaining": max(0, category_limit_yearly - spent)})
 
-    return render_template("yearly.html", year=year, results=results)
+    return render_template("yearly.html", year=year, results=results, CATEGORIES_LIMIT_YEARLY=CATEGORIES_LIMIT_YEARLY)
 
 
 @app.route("/admin/login", methods=["GET", "POST"])
