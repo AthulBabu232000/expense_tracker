@@ -47,6 +47,8 @@ CATEGORIES_LIMIT = {
     "Miscellaneous": 500}
 
 CATEGORIES_LIMIT_YEARLY = {c: CATEGORIES_LIMIT.get(c, 0) * 12 for c in CATEGORIES}
+CATEGORIES_LIMIT_CLOSING = db.category_limits.find_one({"_id": "limits"}) or {}
+CATEGORIES_LIMIT_CLOSING = CATEGORIES_LIMIT_CLOSING.get("closing_limits", {})
 
 
 def _normalize_objectid_str(val: str) -> str:
@@ -101,12 +103,21 @@ def index():
 
 @app.route("/entry", methods=["GET", "POST"])
 def entry():
+    if request.method == "GET":
+        doc = db.category_limits.find_one({"_id": "limits"})
+        if doc:
+            limits = doc.get("limits", {})
+            CATEGORIES_LIMIT.update(limits)
+            temp_limits = doc.get("closing_limits", {})
+            CATEGORIES_LIMIT_CLOSING.update(temp_limits)
     if request.method == "POST":
         name = request.form.get("name", "").strip()
         category = request.form.get("category", "").strip()
         amount = request.form.get("amount", "").strip()
-        opening_balance = CATEGORIES_LIMIT.get(category, 0)
+        opening_balance = CATEGORIES_LIMIT_CLOSING.get(category, 0)
         closing_balance = float(opening_balance)-float(amount)
+        CATEGORIES_LIMIT_CLOSING[category]=closing_balance
+        db.category_limits.update_one({"_id": "limits"}, {"$set": {"closing_limits": CATEGORIES_LIMIT_CLOSING}}, upsert=True)
         if not name or not category or not amount:
             flash("Please fill all required fields.")
             return redirect(url_for("entry"))
@@ -165,8 +176,7 @@ def entry():
         db.entries.insert_one(doc)
         flash("Entry saved.")
         return redirect(url_for("monthly"))
-
-    return render_template("entry_form.html", categories=CATEGORIES, open_balance_of_categories=CATEGORIES_LIMIT)
+    return render_template("entry_form.html", categories=CATEGORIES, open_balance_of_categories=CATEGORIES_LIMIT, closing_balance_of_categories=CATEGORIES_LIMIT_CLOSING)
 
 
 
@@ -260,7 +270,40 @@ def delete(entry_id):
     flash("Entry deleted.")
     return redirect(url_for("manage"))
 
-
+@app.route("/admin/category_limits", methods=["GET", "POST"])
+@admin_required
+def category_limits():
+    if request.method=="POST":
+        food=request.form.get("Food", type=float) or 0
+        transport=request.form.get("Transport", type=float) or 0
+        entertainment=request.form.get("Entertainment", type=float) or 0 
+        bills=request.form.get("Bills", type=float) or 0
+        shopping=request.form.get("Shopping", type=float) or 0
+        health=request.form.get("Health", type=float) or 0
+        investment=request.form.get("Investment", type=float) or 0
+        savings=request.form.get("Savings", type=float) or 0
+        miscellaneous=request.form.get("Miscellaneous", type=float) or 0
+        CATEGORIES_LIMIT["Food"]=food
+        CATEGORIES_LIMIT["Transport"]=transport
+        CATEGORIES_LIMIT["Entertainment"]=entertainment
+        CATEGORIES_LIMIT["Bills"]=bills
+        CATEGORIES_LIMIT["Shopping"]=shopping
+        CATEGORIES_LIMIT["Health"]=health
+        CATEGORIES_LIMIT["Investment"]=investment
+        CATEGORIES_LIMIT["Savings"]=savings
+        CATEGORIES_LIMIT["Miscellaneous"]=miscellaneous
+        CATEGORIES_LIMIT_YEARLY["Food"]=food
+        CATEGORIES_LIMIT_YEARLY["Transport"]=transport
+        CATEGORIES_LIMIT_YEARLY["Entertainment"]=entertainment
+        CATEGORIES_LIMIT_YEARLY["Bills"]=bills
+        CATEGORIES_LIMIT_YEARLY["Shopping"]=shopping
+        CATEGORIES_LIMIT_YEARLY["Health"]=health
+        CATEGORIES_LIMIT_YEARLY["Investment"]=investment
+        CATEGORIES_LIMIT_YEARLY["Savings"]=savings
+        CATEGORIES_LIMIT_YEARLY["Miscellaneous"]=miscellaneous
+        db.category_limits.update_one({"_id": "limits"}, {"$set": {"limits": CATEGORIES_LIMIT, "closing_limits": CATEGORIES_LIMIT_YEARLY}}, upsert=True)
+        flash("Category limits updated.")
+    return render_template("category_limits.html", categories=CATEGORIES, category_limits=CATEGORIES_LIMIT, category_limits_yearly=CATEGORIES_LIMIT_YEARLY)
 if __name__ == "__main__":
     debug = os.getenv("FLASK_DEBUG", "1")
     app.run(host="0.0.0.0", port=5000, debug=bool(int(debug)))

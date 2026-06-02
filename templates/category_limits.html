@@ -5,39 +5,15 @@
 {% block content %}
   <div class="card">
     <div class="card-body">
-      <h2 class="card-title">New Expense Entry</h2>
+      <h2 class="card-title">Enter the expense limits per month</h2>
 
       <form method="post" enctype="multipart/form-data" class="row g-3">
+       {% for c in categories %}
         <div class="col-12">
-          <label class="form-label">Item (required)</label>
-          <input class="form-control" type="text" name="name" required>
+          <label class="form-label">{{ c }}</label>
+          <input class="form-control" type="number" name="{{ c }}" value="{{ category_limits.get(c, 0) }}" required>
         </div>
-        <div class="col-md-6">
-          <label class="form-label">Category</label>
-          <select class="form-select" name="category" id = "category" required>
-            <option value="">Select a category</option>
-            {% for c in categories %}
-              <option value="{{ c }}">{{ c }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Expense (Rs) (required)</label>
-          <input class="form-control" type="number" step="0.01" name="amount" required>
-        </div>
-         <div class="col-md-6">
-          <label class="form-label">Opening Balance (Rs) (required)</label>
-          <input class="form-control" type="number"  name="OpeningBalance"  readonly>
-        </div>
-         <div class="col-md-6">
-          <label class="form-label">Closing Balance (Rs) (required)</label>
-          <input class="form-control" type="number"  name="ClosingBalance"  readonly>
-        </div>
-        <div class="col-12">
-          <label class="form-label">Image (optional)</label>
-          <input class="form-control" type="file" name="image" accept="image/*">
-        </div>
-        <div>{{closing_balance_of_categories}}</div>
+       {% endfor %}
         <div class="col-12">
           <button class="btn btn-primary" type="submit">Submit</button>
         </div>
@@ -47,8 +23,16 @@
 
   <script>
     (function() {
-    const category_limits = {{ closing_balance_of_categories | tojson }};
-    console.log(category_limits);
+    const category_limits= {"Food": 6000,
+    "Transport": 3000,
+    "Entertainment": 2000,
+    "Bills": 20000,
+    "Shopping": 2000,
+    "Health": 2500,
+    "Investment": 58500,
+    "Savings": 29000,
+    "Miscellaneous": 500};
+
     const categorySelect = document.querySelector("select[name='category']");
     const expenseInput = document.querySelector("input[name='amount']");
     const openingBalanceInput = document.querySelector("input[name='OpeningBalance']");
