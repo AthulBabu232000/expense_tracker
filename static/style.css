@@ -26,7 +26,24 @@ input, textarea, select {
 	padding: 0.5rem 0.75rem;
 	border-radius: 6px;
 }
+.navbar-brand {
+    color: #FFD700 !important;
+    font-weight: 700;
+    font-size: 1.4rem;
+    letter-spacing: 1px;
+}
 
+.navbar-brand img {
+    border-radius: 8px;
+}
+.brand-tagline {
+    color: #FFD700;
+    opacity: 0.8;
+    font-size: 0.72rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+	
+}
 input:focus, textarea:focus, select:focus {
 	outline: none;
 	box-shadow: 0 0 16px rgba(255,215,0,0.12), 0 0 40px rgba(255,215,0,0.06) inset;
@@ -40,7 +57,7 @@ input[type=number] { -moz-appearance: textfield; }
 
 /* links and accents */
 a { color: var(--accent-gold); text-decoration: none; }
-a:hover{ color: #fff; text-decoration: underline }
+a:hover{ color: #fff; text-decoration: none }
 a.btn-link { text-decoration: none; color: rgba(255,255,255,0.65); }
 
 /* table rows */

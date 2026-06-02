@@ -95,6 +95,9 @@ def make_primary_key(month: int, year: int) -> str:
 
     return f"{new_count}_{month}_{year}"
 
+def get_closing_limits():
+    doc = db.category_limits.find_one({"_id": "limits"}) or {}
+    return doc.get("closing_limits", {})
 
 @app.route("/")
 def index():
@@ -304,6 +307,83 @@ def category_limits():
         db.category_limits.update_one({"_id": "limits"}, {"$set": {"limits": CATEGORIES_LIMIT, "closing_limits": CATEGORIES_LIMIT_YEARLY}}, upsert=True)
         flash("Category limits updated.")
     return render_template("category_limits.html", categories=CATEGORIES, category_limits=CATEGORIES_LIMIT, category_limits_yearly=CATEGORIES_LIMIT_YEARLY)
+
+
+month = datetime.utcnow().month
+year = datetime.utcnow().year
+pipeline_spending = [
+    {"$match": {"month": month,
+                "year": year
+                }},  # only consider positive amounts for spending distribution
+    {
+        "$group": {
+            "_id": "$category",
+            "total_spent": {"$sum": "$amount"}
+        }
+    }
+]
+
+spending_distribution = list(
+    db.entries.aggregate(pipeline_spending)
+)
+
+pipeline_monthly_trend = [
+    {
+        "$match": {
+            "category": {
+                "$nin": [
+                    "Savings",
+                    "Investment"
+                ]
+            }
+        }
+    },
+    {
+        "$group": {
+            "_id": {
+                "year": "$year",
+                "month": "$month"
+            },
+            "total_spent": {
+                "$sum": "$amount"
+            }
+        }
+    },
+    {
+        "$sort": {
+            "_id.year": 1,
+            "_id.month": 1
+        }
+    }
+]
+
+monthly_trend = list(db.entries.aggregate(pipeline_monthly_trend))
+
+trend_data = []
+month_names = {
+    1: "Jan",
+    2: "Feb",
+    3: "Mar",
+    4: "Apr",
+    5: "May",
+    6: "Jun",
+    7: "Jul",
+    8: "Aug",
+    9: "Sep",
+    10: "Oct",
+    11: "Nov",
+    12: "Dec"
+}
+
+for item in monthly_trend:
+    trend_data.append({
+        "month": f"{month_names[item['_id']['month']]} {item['_id']['year']}",
+        "total": item["total_spent"]
+    })
+@app.route("/analytics")
+def analytics():
+    return render_template("analytics.html", closing_limits=get_closing_limits(), spending_distribution=spending_distribution,trend_data=trend_data)
+
 if __name__ == "__main__":
     debug = os.getenv("FLASK_DEBUG", "1")
     app.run(host="0.0.0.0", port=5000, debug=bool(int(debug)))

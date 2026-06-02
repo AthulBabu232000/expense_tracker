@@ -10,7 +10,26 @@
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <div class="container">
-        <a class="navbar-brand" href="{{ url_for('entry') }}">ExpenseTracker</a>
+        <a class="navbar-brand d-flex align-items-center"
+   href="{{ url_for('entry') }}">
+
+  <div class"">
+
+      <img src="{{ url_for('static', filename='images/luma-logo.png') }}"
+         alt="Luma Logo"
+         height="40"
+         class="me-2">
+
+    <span>Luma</span>
+      <small class="brand-tagline d-block text-muted">
+        See where your resources go.
+    </small>
+  </div>
+
+</a>
+
+  
+        
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
         </button>
@@ -21,6 +40,8 @@
             <li class="nav-item"><a class="nav-link" href="{{ url_for('yearly') }}">Yearly</a></li>
             <li class="nav-item"><a class="nav-link" href="{{ url_for('admin_login') }}">Admin</a></li>
             <li class="nav-item"><a class="nav-link" href="{{ url_for('category_limits') }}">Limits</a></li>
+            <li class="nav-item"><a class="nav-link" href="{{ url_for('analytics') }}">Analytics</a></li>
+
           </ul>
         </div>
       </div>

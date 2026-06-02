@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - Expense Tracker{% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <div class="card-body">
+        <h4>Remaining Budget by Category</h4>
+        <canvas id="remainingBudgetChart"></canvas>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-body">
+        <h4>Spending Distribution by Category</h4>
+        <canvas id="spendingPieChart"></canvas>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-body">
+        <h4>Monthly Spending Trend</h4>
+        <canvas id="monthlyTrendChart"></canvas>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const remainingBudget =
+    {{ closing_limits | tojson | safe }};
+
+const categories = Object.keys(remainingBudget);
+const values = Object.values(remainingBudget);
+
+const ctx =
+    document.getElementById("remainingBudgetChart");
+new Chart(ctx, {
+    type: "bar",
+    data: {
+        labels: categories,
+        datasets: [{
+            label: "Remaining Budget (₹)",
+            data: values,
+            backgroundColor: "#FFD700"
+        }]
+    },
+    options: {
+        indexAxis: "y",
+        responsive: true,
+        plugins: {
+            legend: {
+                display: false
+            },
+        
+        },
+        scales: {
+            x: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+
+const spendingData =
+    {{ spending_distribution | tojson | safe }};
+
+const pieLabels =
+    spendingData.map(item => item._id);
+
+const pieValues =
+    spendingData.map(item => item.total_spent);
+   
+const pieCtx =
+    document.getElementById("spendingPieChart");
+
+new Chart(pieCtx, {
+    type: "pie",
+
+    data: {
+        labels: pieLabels,
+        plugins: {
+            legend: {
+                display: false,
+            },
+        
+        },
+
+        datasets: [{
+            data: pieValues,
+
+            backgroundColor: [
+                "#FFD700",
+                "#FF8C00",
+                "#DC143C",
+                "#1E90FF",
+                "#32CD32",
+                "#8A2BE2",
+                "#20B2AA",
+                "#FF69B4",
+                "#708090"
+            ]
+        }]
+    },
+
+    options: {
+        responsive: true,
+
+        plugins: {
+            legend: {
+                position: "right"
+            }
+        }
+    }
+});
+
+
+const trendData =
+    {{ trend_data | tojson | safe }};
+
+const trendLabels =
+    trendData.map(item => item.month);
+
+const trendValues =
+    trendData.map(item => item.total);
+
+const trendCtx =
+    document.getElementById("monthlyTrendChart");
+
+new Chart(trendCtx, {
+    type: "line",
+
+    data: {
+        labels: trendLabels,
+
+        datasets: [{
+            label: "Monthly Spending",
+            data: trendValues,
+            borderColor: "#FFD700",
+            backgroundColor: "#FFD700",
+            tension: 0.3,
+            fill: false
+        }]
+    },
+
+    options: {
+        responsive: true,
+
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+</script>
+{% endblock %}
+
