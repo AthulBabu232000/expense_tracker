@@ -99,22 +99,22 @@ def get_closing_limits():
     doc = db.category_limits.find_one({"_id": "limits"}) or {}
     return doc.get("closing_limits", {})
 
-def get_or_create_monthly_budget(month, year):
-    budget_doc = db.monthly_budgets.find_one({
-        "month": month,
-        "year": year
-    })
-    if budget_doc:
-        return budget_doc
-    budget_doc = {
-        "_id": f"{month}_{year}",
-        "month": month,
-        "year": year,
-        "limits": CATEGORIES_LIMIT.copy(),
-        "closing_limits": CATEGORIES_LIMIT.copy()
-    }
-    db.monthly_budgets.insert_one(budget_doc)
-    return budget_doc
+# def get_or_create_monthly_budget(month, year):
+#     budget_doc = db.monthly_budgets.find_one({
+#         "month": month,
+#         "year": year
+#     })
+#     if budget_doc:
+#         return budget_doc
+#     budget_doc = {
+#         "_id": f"{month}_{year}",
+#         "month": month,
+#         "year": year,
+#         "limits": CATEGORIES_LIMIT.copy(),
+#         "closing_limits": CATEGORIES_LIMIT.copy()
+#     }
+#     db.monthly_budgets.insert_one(budget_doc)
+#     return budget_doc
 
 
 
@@ -130,10 +130,10 @@ def entry():
     if request.method == "GET":
         month = datetime.utcnow().month
         year = datetime.utcnow().year
-        budget = get_or_create_monthly_budget(
-            month,
-            year
-        )
+        # budget = get_or_create_monthly_budget(
+        #     month,
+        #     year
+        # )
         doc = db.category_limits.find_one({"_id": "limits"})
         if doc:
             limits = doc.get("limits", {})
