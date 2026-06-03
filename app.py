@@ -99,31 +99,26 @@ def get_closing_limits():
     doc = db.category_limits.find_one({"_id": "limits"}) or {}
     return doc.get("closing_limits", {})
 
-def _recalculate_closing_balances():
-    """Recalculate all closing balances for categories after an entry is deleted."""
-    # Initialize with 0 for all categories
-    closing_balances = {cat: 0 for cat in CATEGORIES}
-    
-    # Get all entries sorted by timestamp
-    entries = db.entries.find({}).sort("timestamp", 1)
-    
-    # Recalculate running balance
-    for entry in entries:
-        category = entry.get("category")
-        amount = entry.get("amount", 0)
-        if category:
-            closing_balances[category] = closing_balances.get(category, 0) - float(amount)
-    
-    # Update DB with recalculated closing balances
-    db.category_limits.update_one(
-        {"_id": "limits"}, 
-        {"$set": {"closing_limits": closing_balances}}, 
-        upsert=True
-    )
-    
-    # Update global variable
-    global CATEGORIES_LIMIT_CLOSING
-    CATEGORIES_LIMIT_CLOSING.update(closing_balances)
+def get_or_create_monthly_budget(month, year):
+    budget_doc = db.monthly_budgets.find_one({
+        "month": month,
+        "year": year
+    })
+    if budget_doc:
+        return budget_doc
+    budget_doc = {
+        "_id": f"{month}_{year}",
+        "month": month,
+        "year": year,
+        "limits": CATEGORIES_LIMIT.copy(),
+        "closing_limits": CATEGORIES_LIMIT.copy()
+    }
+    db.monthly_budgets.insert_one(budget_doc)
+    return budget_doc
+
+
+
+
 
 @app.route("/")
 def index():
@@ -133,6 +128,12 @@ def index():
 @app.route("/entry", methods=["GET", "POST"])
 def entry():
     if request.method == "GET":
+        month = datetime.utcnow().month
+        year = datetime.utcnow().year
+        budget = get_or_create_monthly_budget(
+            month,
+            year
+        )
         doc = db.category_limits.find_one({"_id": "limits"})
         if doc:
             limits = doc.get("limits", {})
@@ -143,7 +144,8 @@ def entry():
         name = request.form.get("name", "").strip()
         category = request.form.get("category", "").strip()
         amount = request.form.get("amount", "").strip()
-        
+        current_month = datetime.utcnow().month
+        current_year = datetime.utcnow().year
         # Validate first before any DB updates
         if not name or not category or not amount:
             flash("Please fill all required fields.")
@@ -299,18 +301,29 @@ def manage():
 @admin_required
 def delete(entry_id):
     eid = _normalize_objectid_str(entry_id)
+    entry = db.entries.find_one({"_id": ObjectId(eid)})
     db.entries.delete_one({"_id": ObjectId(eid)})
-    
-    # Recalculate closing balances for all categories after deletion
-    _recalculate_closing_balances()
-    
+    category = entry.get("category")
+    amount = entry.get("amount",0)
+    CATEGORIES_LIMIT_CLOSING[category] = CATEGORIES_LIMIT_CLOSING.get(category, 0) + amount
+    db.category_limits.update_one({"_id": "limits"}, {"$set": {"closing_limits": CATEGORIES_LIMIT_CLOSING}}, upsert=True)
     flash("Entry deleted.")
     return redirect(url_for("manage"))
 
 @app.route("/admin/category_limits", methods=["GET", "POST"])
 @admin_required
 def category_limits():
+    current_month = datetime.utcnow().month
+    current_year = datetime.utcnow().year
+    entry_count = db.entries.count_documents({"month": current_month, "year": current_year})
+    global limit_adding_flag
+    limit_adding_flag = True
+    if entry_count > 0:
+        limit_adding_flag = False
+        # flash("Note: Since there are entries this month no further edit to limit is allowed.")
+        return render_template("category_limits2.html")
     if request.method=="POST":
+        CLOSING_LIMITS = CATEGORIES_LIMIT_CLOSING.copy()
         food=request.form.get("Food", type=float) or 0
         transport=request.form.get("Transport", type=float) or 0
         entertainment=request.form.get("Entertainment", type=float) or 0 
@@ -329,16 +342,16 @@ def category_limits():
         CATEGORIES_LIMIT["Investment"]=investment
         CATEGORIES_LIMIT["Savings"]=savings
         CATEGORIES_LIMIT["Miscellaneous"]=miscellaneous
-        CATEGORIES_LIMIT_YEARLY["Food"]=food
-        CATEGORIES_LIMIT_YEARLY["Transport"]=transport
-        CATEGORIES_LIMIT_YEARLY["Entertainment"]=entertainment
-        CATEGORIES_LIMIT_YEARLY["Bills"]=bills
-        CATEGORIES_LIMIT_YEARLY["Shopping"]=shopping
-        CATEGORIES_LIMIT_YEARLY["Health"]=health
-        CATEGORIES_LIMIT_YEARLY["Investment"]=investment
-        CATEGORIES_LIMIT_YEARLY["Savings"]=savings
-        CATEGORIES_LIMIT_YEARLY["Miscellaneous"]=miscellaneous
-        db.category_limits.update_one({"_id": "limits"}, {"$set": {"limits": CATEGORIES_LIMIT, "closing_limits": CATEGORIES_LIMIT_YEARLY}}, upsert=True)
+        CLOSING_LIMITS["Food"]=food
+        CLOSING_LIMITS["Transport"]=transport
+        CLOSING_LIMITS["Entertainment"]=entertainment
+        CLOSING_LIMITS["Bills"]=bills
+        CLOSING_LIMITS["Shopping"]=shopping
+        CLOSING_LIMITS["Health"]=health
+        CLOSING_LIMITS["Investment"]=investment
+        CLOSING_LIMITS["Savings"]=savings
+        CLOSING_LIMITS["Miscellaneous"]=miscellaneous
+        db.category_limits.update_one({"_id": "limits"}, {"$set": {"limits": CATEGORIES_LIMIT, "closing_limits": CLOSING_LIMITS}}, upsert=True)
         flash("Category limits updated.")
     return render_template("category_limits.html", categories=CATEGORIES, category_limits=CATEGORIES_LIMIT, category_limits_yearly=CATEGORIES_LIMIT_YEARLY)
 
