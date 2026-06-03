@@ -99,6 +99,32 @@ def get_closing_limits():
     doc = db.category_limits.find_one({"_id": "limits"}) or {}
     return doc.get("closing_limits", {})
 
+def _recalculate_closing_balances():
+    """Recalculate all closing balances for categories after an entry is deleted."""
+    # Initialize with 0 for all categories
+    closing_balances = {cat: 0 for cat in CATEGORIES}
+    
+    # Get all entries sorted by timestamp
+    entries = db.entries.find({}).sort("timestamp", 1)
+    
+    # Recalculate running balance
+    for entry in entries:
+        category = entry.get("category")
+        amount = entry.get("amount", 0)
+        if category:
+            closing_balances[category] = closing_balances.get(category, 0) - float(amount)
+    
+    # Update DB with recalculated closing balances
+    db.category_limits.update_one(
+        {"_id": "limits"}, 
+        {"$set": {"closing_limits": closing_balances}}, 
+        upsert=True
+    )
+    
+    # Update global variable
+    global CATEGORIES_LIMIT_CLOSING
+    CATEGORIES_LIMIT_CLOSING.update(closing_balances)
+
 @app.route("/")
 def index():
     return redirect(url_for("entry"))
@@ -117,10 +143,8 @@ def entry():
         name = request.form.get("name", "").strip()
         category = request.form.get("category", "").strip()
         amount = request.form.get("amount", "").strip()
-        opening_balance = CATEGORIES_LIMIT_CLOSING.get(category, 0)
-        closing_balance = float(opening_balance)-float(amount)
-        CATEGORIES_LIMIT_CLOSING[category]=closing_balance
-        db.category_limits.update_one({"_id": "limits"}, {"$set": {"closing_limits": CATEGORIES_LIMIT_CLOSING}}, upsert=True)
+        
+        # Validate first before any DB updates
         if not name or not category or not amount:
             flash("Please fill all required fields.")
             return redirect(url_for("entry"))
@@ -130,6 +154,12 @@ def entry():
         except ValueError:
             flash("Amount must be a number.")
             return redirect(url_for("entry"))
+        
+        # Now calculate balances after validation passes
+        opening_balance = CATEGORIES_LIMIT_CLOSING.get(category, 0)
+        closing_balance = float(opening_balance) - float(amount_val)
+        CATEGORIES_LIMIT_CLOSING[category] = closing_balance
+        db.category_limits.update_one({"_id": "limits"}, {"$set": {"closing_limits": CATEGORIES_LIMIT_CLOSING}}, upsert=True)
 
         # timestamp and primary key
         now = datetime.utcnow()
@@ -270,6 +300,10 @@ def manage():
 def delete(entry_id):
     eid = _normalize_objectid_str(entry_id)
     db.entries.delete_one({"_id": ObjectId(eid)})
+    
+    # Recalculate closing balances for all categories after deletion
+    _recalculate_closing_balances()
+    
     flash("Entry deleted.")
     return redirect(url_for("manage"))
 
@@ -309,80 +343,66 @@ def category_limits():
     return render_template("category_limits.html", categories=CATEGORIES, category_limits=CATEGORIES_LIMIT, category_limits_yearly=CATEGORIES_LIMIT_YEARLY)
 
 
-month = datetime.utcnow().month
-year = datetime.utcnow().year
-pipeline_spending = [
-    {"$match": {"month": month,
-                "year": year
-                }},  # only consider positive amounts for spending distribution
-    {
-        "$group": {
-            "_id": "$category",
-            "total_spent": {"$sum": "$amount"}
-        }
-    }
-]
-
-spending_distribution = list(
-    db.entries.aggregate(pipeline_spending)
-)
-
-pipeline_monthly_trend = [
-    {
-        "$match": {
-            "category": {
-                "$nin": [
-                    "Savings",
-                    "Investment"
-                ]
-            }
-        }
-    },
-    {
-        "$group": {
-            "_id": {
-                "year": "$year",
-                "month": "$month"
-            },
-            "total_spent": {
-                "$sum": "$amount"
-            }
-        }
-    },
-    {
-        "$sort": {
-            "_id.year": 1,
-            "_id.month": 1
-        }
-    }
-]
-
-monthly_trend = list(db.entries.aggregate(pipeline_monthly_trend))
-
-trend_data = []
-month_names = {
-    1: "Jan",
-    2: "Feb",
-    3: "Mar",
-    4: "Apr",
-    5: "May",
-    6: "Jun",
-    7: "Jul",
-    8: "Aug",
-    9: "Sep",
-    10: "Oct",
-    11: "Nov",
-    12: "Dec"
-}
-
-for item in monthly_trend:
-    trend_data.append({
-        "month": f"{month_names[item['_id']['month']]} {item['_id']['year']}",
-        "total": item["total_spent"]
-    })
 @app.route("/analytics")
 def analytics():
-    return render_template("analytics.html", closing_limits=get_closing_limits(), spending_distribution=spending_distribution,trend_data=trend_data)
+    month = datetime.utcnow().month
+    year = datetime.utcnow().year
+    
+    # Calculate spending distribution for current month
+    pipeline_spending = [
+        {"$match": {"month": month, "year": year}},
+        {
+            "$group": {
+                "_id": "$category",
+                "total_spent": {"$sum": "$amount"}
+            }
+        }
+    ]
+    spending_distribution = list(db.entries.aggregate(pipeline_spending))
+    
+    # Calculate monthly trend (excluding Savings and Investment)
+    pipeline_monthly_trend = [
+        {
+            "$match": {
+                "category": {
+                    "$nin": ["Savings", "Investment"]
+                }
+            }
+        },
+        {
+            "$group": {
+                "_id": {
+                    "year": "$year",
+                    "month": "$month"
+                },
+                "total_spent": {
+                    "$sum": "$amount"
+                }
+            }
+        },
+        {
+            "$sort": {
+                "_id.year": 1,
+                "_id.month": 1
+            }
+        }
+    ]
+    monthly_trend = list(db.entries.aggregate(pipeline_monthly_trend))
+    
+    # Format trend data
+    trend_data = []
+    month_names = {
+        1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "May", 6: "Jun",
+        7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec"
+    }
+    
+    for item in monthly_trend:
+        trend_data.append({
+            "month": f"{month_names[item['_id']['month']]} {item['_id']['year']}",
+            "total": item["total_spent"]
+        })
+    
+    return render_template("analytics.html", closing_limits=get_closing_limits(), spending_distribution=spending_distribution, trend_data=trend_data)
 
 if __name__ == "__main__":
     debug = os.getenv("FLASK_DEBUG", "1")
